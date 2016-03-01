@@ -8,8 +8,8 @@ import (
 	"os"
 	u "os/user"
 
-	"github.com/GoBootcamp/clirescue/cmdutil"
-	"github.com/GoBootcamp/clirescue/user"
+	"github.com/duranmla/clirescue/cmdutil"
+	"github.com/duranmla/clirescue/user"
 )
 
 var (
@@ -20,9 +20,33 @@ var (
 )
 
 func Me() {
-	setCredentials()
-	parse(makeRequest())
-	ioutil.WriteFile(FileLocation, []byte(currentUser.APIToken), 0644)
+	file, error := getCredentials()
+
+	if error != nil  {
+		setCredentials()
+		ioutil.WriteFile(FileLocation, []byte(currentUser.APIToken), 0644)
+		parse(makeRequest())
+	} else {
+		currentUser.APIToken = string(file)
+		parse(makeRequestWithToken())
+	}
+}
+
+func getCredentials() ([]byte, error) {
+	return ioutil.ReadFile(FileLocation)
+}
+
+func makeRequestWithToken() []byte {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", URL, nil)
+	req.Header.Set("X-TrackerToken", currentUser.APIToken)
+	resp, err := client.Do(req)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Print(err)
+	}
+	fmt.Printf("\n****\nAPI response: \n%s\n", string(body))
+	return body
 }
 
 func makeRequest() []byte {
